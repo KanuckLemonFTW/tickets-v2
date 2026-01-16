@@ -4,10 +4,12 @@ import fs from 'fs';
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
+// Load data
 let data = JSON.parse(fs.readFileSync('./data.json', 'utf8'));
-function saveData() { fs.writeFileSync('./data.json', JSON.stringify(data, null, 2)); }
 if (!data.openTickets) data.openTickets = {};
+function saveData() { fs.writeFileSync('./data.json', JSON.stringify(data, null, 2)); }
 
+// Create client
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -37,7 +39,7 @@ const commands = [
     ),
   new SlashCommandBuilder()
     .setName('ticket-move')
-    .setDescription('Move the ticket to another category')
+    .setDescription('Move ticket to another category')
     .addStringOption(o =>
       o.setName('category')
        .setDescription('Select new category')
@@ -64,7 +66,7 @@ const commands = [
     .setDescription('Send the verification panel to the configured channel')
 ].map(c => c.toJSON());
 
-// ===== Register Commands =====
+// Register commands
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
 console.log('Commands registered');
@@ -75,7 +77,7 @@ client.on('guildMemberAdd', async member => {
     const role = member.guild.roles.cache.get('1460871383197417556');
     if (role) await member.roles.add(role);
 
-    await member.send(`Welcome to ${member.guild.name}, ${member.user.username}! 🎉\nYou have been given your starter role. Enjoy your stay!`);
+    await member.send(`Welcome to ${member.guild.name}, ${member.user.username}! 🎉\nYou have been given your starter role.`);
   } catch (err) {
     console.log(`Failed to welcome ${member.user.tag}: ${err}`);
   }
@@ -91,11 +93,12 @@ client.on('interactionCreate', async i => {
 
   // ---------- Slash Commands ----------
   if (i.isChatInputCommand()) {
+
     // ---------- /create-ticket ----------
     if (i.commandName === 'create-ticket') {
       const type = i.options.getString('type');
       const ticketType = data.ticketTypes[type];
-      if (!ticketType) return i.reply({ content: '❌ Invalid ticket type.', ephemeral: true });
+      if (!ticketType) return i.reply({ content: '❌ Invalid ticket type.', flags: 64 });
 
       const everyone = i.guild.roles.everyone;
       const ticketChannel = await i.guild.channels.create({
@@ -130,62 +133,63 @@ client.on('interactionCreate', async i => {
         if (log?.isTextBased()) log.send({ content: `📩 Ticket ${ticketChannel.name} created by ${i.user.tag}` });
       }
 
-      return i.reply({ content: `✅ Your ticket has been created: ${ticketChannel}`, ephemeral: true });
+      return i.reply({ content: `✅ Your ticket has been created: ${ticketChannel}`, flags: 64 });
     }
 
     // ---------- /ticket-move ----------
     if (i.commandName === 'ticket-move') {
       const newType = i.options.getString('category');
       const newTicketType = data.ticketTypes[newType];
-      if (!newTicketType) return i.reply({ content: '❌ Invalid category.', ephemeral: true });
+      if (!newTicketType) return i.reply({ content: '❌ Invalid category.', flags: 64 });
 
       const currentType = data.openTickets[channel.id];
-      if (!currentType) return i.reply({ content: '❌ Not a ticket channel.', ephemeral: true });
+      if (!currentType) return i.reply({ content: '❌ Not a ticket channel.', flags: 64 });
 
       const member = await i.guild.members.fetch(i.user.id);
       if (!member.roles.cache.some(r => data.ticketTypes[currentType].supportRoles.includes(r.id)))
-        return i.reply({ content: '❌ You are not allowed to move this ticket.', ephemeral: true });
+        return i.reply({ content: '❌ You are not allowed to move this ticket.', flags: 64 });
 
       await channel.setParent(newTicketType.categoryId);
       data.openTickets[channel.id] = newType;
       saveData();
-      return i.reply({ content: `✅ Ticket moved to ${newType}.`, ephemeral: true });
+      return i.reply({ content: `✅ Ticket moved to ${newType}.`, flags: 64 });
     }
 
     // ---------- /ticket-add ----------
     if (i.commandName === 'ticket-add') {
       const user = i.options.getUser('user');
       const type = data.openTickets[channel.id];
-      if (!type) return i.reply({ content: '❌ Not a ticket channel.', ephemeral: true });
+      if (!type) return i.reply({ content: '❌ Not a ticket channel.', flags: 64 });
 
       const member = await i.guild.members.fetch(i.user.id);
       if (!member.roles.cache.some(r => data.ticketTypes[type].supportRoles.includes(r.id)))
-        return i.reply({ content: '❌ You are not allowed to add users.', ephemeral: true });
+        return i.reply({ content: '❌ You are not allowed to add users.', flags: 64 });
 
       await channel.permissionOverwrites.edit(user.id, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true });
-      return i.reply({ content: `✅ Added ${user.tag} to the ticket.`, ephemeral: true });
+      return i.reply({ content: `✅ Added ${user.tag} to the ticket.`, flags: 64 });
     }
 
     // ---------- /ticket-remove ----------
     if (i.commandName === 'ticket-remove') {
       const user = i.options.getUser('user');
       const type = data.openTickets[channel.id];
-      if (!type) return i.reply({ content: '❌ Not a ticket channel.', ephemeral: true });
+      if (!type) return i.reply({ content: '❌ Not a ticket channel.', flags: 64 });
 
       const member = await i.guild.members.fetch(i.user.id);
       if (!member.roles.cache.some(r => data.ticketTypes[type].supportRoles.includes(r.id)))
-        return i.reply({ content: '❌ You are not allowed to remove users.', ephemeral: true });
+        return i.reply({ content: '❌ You are not allowed to remove users.', flags: 64 });
 
       await channel.permissionOverwrites.delete(user.id);
-      return i.reply({ content: `✅ Removed ${user.tag} from the ticket.`, ephemeral: true });
+      return i.reply({ content: `✅ Removed ${user.tag} from the ticket.`, flags: 64 });
     }
 
     // ---------- /send-verify-panel ----------
     if (i.commandName === 'send-verify-panel') {
-      if (i.user.id !== i.guild.ownerId) return i.reply({ content: '❌ Only the server owner can send the verification panel.', ephemeral: true });
+      if (i.user.id !== i.guild.ownerId) 
+        return i.reply({ content: '❌ Only the server owner can send the verification panel.', flags: 64 });
 
       const panelChannel = client.channels.cache.get(data.verificationPanelChannel);
-      if (!panelChannel?.isTextBased()) return i.reply({ content: '❌ Verification panel channel not found.', ephemeral: true });
+      if (!panelChannel?.isTextBased()) return i.reply({ content: '❌ Verification panel channel not found.', flags: 64 });
 
       const embed = new EmbedBuilder()
         .setTitle('Click to Verify')
@@ -193,34 +197,38 @@ client.on('interactionCreate', async i => {
         .setColor(0x00FF00);
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('verify_ticket_verify').setLabel('Verify').setStyle(ButtonStyle.Primary)
+        new ButtonBuilder().setCustomId('verify').setLabel('Verify').setStyle(ButtonStyle.Primary)
       );
 
       await panelChannel.send({ embeds: [embed], components: [row] });
-      return i.reply({ content: `✅ Verification panel sent to ${panelChannel.name}.`, ephemeral: true });
+
+      if (!i.replied && !i.deferred) {
+        await i.reply({ content: `✅ Verification panel sent to ${panelChannel.name}.`, flags: 64 });
+      }
     }
   }
 
-  // ---------- Button Handlers ----------
+  // ---------- Button Interactions ----------
   if (i.isButton()) {
-    const channel = i.channel;
+    const type = i.customId === 'verify' ? 'verify' : data.openTickets[channel.id];
+    if (!type) return i.reply({ content: '❌ Ticket type not recognized.', flags: 64 });
 
-    // ---------- Verification Button ----------
-    if (i.customId.startsWith('verify_ticket_')) {
-      const type = i.customId.split('_')[2];
-      const vt = data.ticketTypes[type];
-      if (!vt) return i.reply({ content: '❌ Ticket type not recognized.', ephemeral: true });
+    const ticketType = data.ticketTypes[type];
+    const supportRoles = ticketType.supportRoles;
+    const member = await i.guild.members.fetch(i.user.id);
 
+    // Verification Ticket Button
+    if (i.customId === 'verify') {
       const everyone = i.guild.roles.everyone;
 
       const ticketChannel = await i.guild.channels.create({
         name: `ticket-${i.user.username.toLowerCase()}`,
         type: 0,
-        parent: vt.categoryId,
+        parent: ticketType.categoryId,
         permissionOverwrites: [
           { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
           { id: i.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-          ...vt.supportRoles.map(r => ({ id: r, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }))
+          ...ticketType.supportRoles.map(r => ({ id: r, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }))
         ]
       });
 
@@ -245,30 +253,22 @@ client.on('interactionCreate', async i => {
         if (log?.isTextBased()) log.send({ content: `📩 ${type} ticket ${ticketChannel.name} created by ${i.user.tag}` });
       }
 
-      return i.reply({ content: `✅ ${type} ticket created: ${ticketChannel}`, ephemeral: true });
+      return i.reply({ content: `✅ ${type} ticket created: ${ticketChannel}`, flags: 64 });
     }
 
-    // ---------- Claim / Close ----------
-    const type = data.openTickets[channel.id];
-    if (!type) return i.reply({ content: '❌ Ticket type not recognized.', ephemeral: true });
-
-    const ticketType = data.ticketTypes[type];
-    const supportRoles = ticketType.supportRoles;
-    const member = await i.guild.members.fetch(i.user.id);
-
-    // Claim
+    // Claim Button
     if (i.customId === 'claim_ticket') {
       if (!member.roles.cache.some(r => supportRoles.includes(r.id)))
-        return i.reply({ content: '❌ You are not authorized to claim this ticket.', ephemeral: true });
-      return i.reply({ content: `✅ Ticket claimed by ${i.user.tag}`, ephemeral: true });
+        return i.reply({ content: '❌ You are not authorized to claim this ticket.', flags: 64 });
+      return i.reply({ content: `✅ Ticket claimed by ${i.user.tag}`, flags: 64 });
     }
 
-    // Close
+    // Close Button
     if (i.customId === 'close_ticket') {
       if (!member.roles.cache.some(r => supportRoles.includes(r.id)))
-        return i.reply({ content: '❌ You are not authorized to close this ticket.', ephemeral: true });
+        return i.reply({ content: '❌ You are not authorized to close this ticket.', flags: 64 });
 
-      // Send transcript
+      // Transcript
       if (data.transcriptChannel) {
         let messages = await channel.messages.fetch({ limit: 100 });
         messages = messages.map(m => `[${m.author.tag}] ${m.content}`).reverse().join('\n');
@@ -290,7 +290,7 @@ client.on('interactionCreate', async i => {
       delete data.openTickets[channel.id];
       saveData();
 
-      await i.reply({ content: '✅ Ticket closed and channel will be deleted shortly.', ephemeral: true });
+      await i.reply({ content: '✅ Ticket closed and channel will be deleted shortly.', flags: 64 });
       setTimeout(() => channel.delete().catch(() => {}), 3000);
     }
   }
