@@ -126,7 +126,10 @@ client.on('interactionCreate', async i => {
           new ButtonBuilder().setCustomId('close_ticket').setLabel('Close').setStyle(ButtonStyle.Danger)
         );
 
-      await ticketChannel.send({ content: `<@${i.user.id}>`, embeds: [embed], components: [row] });
+      // Ping support roles
+      const supportPing = ticketType.supportRoles.map(r => `<@&${r}>`).join(' ');
+
+      await ticketChannel.send({ content: `${supportPing} <@${i.user.id}>`, embeds: [embed], components: [row] });
 
       if (data.ticketLogChannel) {
         const log = client.channels.cache.get(data.ticketLogChannel);
@@ -185,16 +188,20 @@ client.on('interactionCreate', async i => {
 
     // ---------- /send-verify-panel ----------
     if (i.commandName === 'send-verify-panel') {
-      if (i.user.id !== i.guild.ownerId) 
+      if (i.user.id !== i.guild.ownerId)
         return i.reply({ content: '❌ Only the server owner can send the verification panel.', flags: 64 });
 
       const panelChannel = client.channels.cache.get(data.verificationPanelChannel);
-      if (!panelChannel?.isTextBased()) return i.reply({ content: '❌ Verification panel channel not found.', flags: 64 });
+      if (!panelChannel?.isTextBased())
+        return i.reply({ content: '❌ Verification panel channel not found.', flags: 64 });
 
-      // --- Prevent duplicate panels ---
+      // Defer reply to prevent 40060
+      if (!i.deferred && !i.replied) await i.deferReply({ ephemeral: true });
+
+      // Prevent duplicate panels
       const messages = await panelChannel.messages.fetch({ limit: 50 });
       const existingPanel = messages.find(m => m.components.length && m.components[0].components[0].customId === 'verify');
-      if (existingPanel) return i.reply({ content: '⚠️ Verification panel already exists in this channel.', flags: 64 });
+      if (existingPanel) return i.editReply({ content: '⚠️ Verification panel already exists in this channel.' });
 
       const embed = new EmbedBuilder()
         .setTitle('Click to Verify')
@@ -207,9 +214,7 @@ client.on('interactionCreate', async i => {
 
       await panelChannel.send({ embeds: [embed], components: [row] });
 
-      if (!i.replied && !i.deferred) {
-        await i.reply({ content: `✅ Verification panel sent to ${panelChannel.name}.`, flags: 64 });
-      }
+      return i.editReply({ content: `✅ Verification panel sent to ${panelChannel.name}.` });
     }
   }
 
@@ -251,7 +256,10 @@ client.on('interactionCreate', async i => {
           new ButtonBuilder().setCustomId('close_ticket').setLabel('Close').setStyle(ButtonStyle.Danger)
         );
 
-      await ticketChannel.send({ content: `<@${i.user.id}>`, embeds: [embed], components: [row] });
+      // Ping support roles
+      const supportPing = ticketType.supportRoles.map(r => `<@&${r}>`).join(' ');
+
+      await ticketChannel.send({ content: `${supportPing} <@${i.user.id}>`, embeds: [embed], components: [row] });
 
       if (data.ticketLogChannel) {
         const log = client.channels.cache.get(data.ticketLogChannel);
