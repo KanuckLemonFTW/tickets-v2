@@ -87,11 +87,10 @@ client.once('ready', () => console.log(`Logged in as ${client.user.tag}`));
 // ===== Interaction Handler =====
 client.on('interactionCreate', async i => {
   if (!i.isChatInputCommand() && !i.isButton()) return;
+  const channel = i.channel;
 
   // ---------- Slash Commands ----------
   if (i.isChatInputCommand()) {
-    const channel = i.channel;
-
     // ---------- /create-ticket ----------
     if (i.commandName === 'create-ticket') {
       const type = i.options.getString('type');
@@ -194,7 +193,7 @@ client.on('interactionCreate', async i => {
         .setColor(0x00FF00);
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('verify_ticket').setLabel('Verify').setStyle(ButtonStyle.Primary)
+        new ButtonBuilder().setCustomId('verify_ticket_verify').setLabel('Verify').setStyle(ButtonStyle.Primary)
       );
 
       await panelChannel.send({ embeds: [embed], components: [row] });
@@ -205,6 +204,51 @@ client.on('interactionCreate', async i => {
   // ---------- Button Handlers ----------
   if (i.isButton()) {
     const channel = i.channel;
+
+    // ---------- Verification Button ----------
+    if (i.customId.startsWith('verify_ticket_')) {
+      const type = i.customId.split('_')[2];
+      const vt = data.ticketTypes[type];
+      if (!vt) return i.reply({ content: '❌ Ticket type not recognized.', ephemeral: true });
+
+      const everyone = i.guild.roles.everyone;
+
+      const ticketChannel = await i.guild.channels.create({
+        name: `ticket-${i.user.username.toLowerCase()}`,
+        type: 0,
+        parent: vt.categoryId,
+        permissionOverwrites: [
+          { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+          { id: i.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+          ...vt.supportRoles.map(r => ({ id: r, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }))
+        ]
+      });
+
+      data.openTickets[ticketChannel.id] = type;
+      saveData();
+
+      const embed = new EmbedBuilder()
+        .setTitle(`${type} Ticket`)
+        .setDescription(`Ticket created by ${i.user.tag}`)
+        .setColor(0x00FF00);
+
+      const row = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder().setCustomId('claim_ticket').setLabel('Claim').setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setCustomId('close_ticket').setLabel('Close').setStyle(ButtonStyle.Danger)
+        );
+
+      await ticketChannel.send({ content: `<@${i.user.id}>`, embeds: [embed], components: [row] });
+
+      if (data.ticketLogChannel) {
+        const log = client.channels.cache.get(data.ticketLogChannel);
+        if (log?.isTextBased()) log.send({ content: `📩 ${type} ticket ${ticketChannel.name} created by ${i.user.tag}` });
+      }
+
+      return i.reply({ content: `✅ ${type} ticket created: ${ticketChannel}`, ephemeral: true });
+    }
+
+    // ---------- Claim / Close ----------
     const type = data.openTickets[channel.id];
     if (!type) return i.reply({ content: '❌ Ticket type not recognized.', ephemeral: true });
 
@@ -249,48 +293,7 @@ client.on('interactionCreate', async i => {
       await i.reply({ content: '✅ Ticket closed and channel will be deleted shortly.', ephemeral: true });
       setTimeout(() => channel.delete().catch(() => {}), 3000);
     }
-
-    // Verification button
-    if (i.customId === 'verify_ticket') {
-      const vt = data.ticketTypes['verify'];
-      const everyone = i.guild.roles.everyone;
-
-      const ticketChannel = await i.guild.channels.create({
-        name: `ticket-${i.user.username.toLowerCase()}`,
-        type: 0,
-        parent: vt.categoryId,
-        permissionOverwrites: [
-          { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-          { id: i.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-          ...vt.supportRoles.map(r => ({ id: r, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }))
-        ]
-      });
-
-      data.openTickets[ticketChannel.id] = 'verify';
-      saveData();
-
-      const embed = new EmbedBuilder()
-        .setTitle('Verification Ticket')
-        .setDescription(`Ticket created by ${i.user.tag}`)
-        .setColor(0x00FF00);
-
-      const row = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder().setCustomId('claim_ticket').setLabel('Claim').setStyle(ButtonStyle.Success),
-          new ButtonBuilder().setCustomId('close_ticket').setLabel('Close').setStyle(ButtonStyle.Danger)
-        );
-
-      await ticketChannel.send({ content: `<@${i.user.id}>`, embeds: [embed], components: [row] });
-
-      if (data.ticketLogChannel) {
-        const log = client.channels.cache.get(data.ticketLogChannel);
-        if (log?.isTextBased()) log.send({ content: `📩 Verification ticket ${ticketChannel.name} created by ${i.user.tag}` });
-      }
-
-      return i.reply({ content: `✅ Verification ticket created: ${ticketChannel}`, ephemeral: true });
-    }
   }
 });
 
-// ===== Login =====
 client.login(TOKEN);
