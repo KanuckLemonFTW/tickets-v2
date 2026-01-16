@@ -1,29 +1,11 @@
 {
   "ticketTypes": {
-    "verify": {
-      "categoryId": "1461569591116304394",
-      "supportRoles": ["1459425053161558191", "1459425052402516223"]
-    },
-    "general_support": {
-      "categoryId": "1461570009313837116",
-      "supportRoles": ["1461570028053860629"]
-    },
-    "staff_report": {
-      "categoryId": "1461569591116304394",
-      "supportRoles": ["1459425053161558191", "1459425052402516223"]
-    },
-    "management_report": {
-      "categoryId": "1461570736698425389",
-      "supportRoles": ["1459413971642876089", "1459413972330615030"]
-    },
-    "management_support": {
-      "categoryId": "1461570814414684220",
-      "supportRoles": ["1459413982153539728"]
-    },
-    "appeal_ticket": {
-      "categoryId": "1461570917753946192",
-      "supportRoles": ["1461570948611444818"]
-    }
+    "verify": { "categoryId": "1461569591116304394", "supportRoles": ["1459425053161558191","1459425052402516223"] },
+    "general_support": { "categoryId": "1461570009313837116", "supportRoles": ["1461570028053860629"] },
+    "staff_report": { "categoryId": "1461569591116304394", "supportRoles": ["1459425053161558191","1459425052402516223"] },
+    "management_report": { "categoryId": "1461570736698425389", "supportRoles": ["1459413971642876089","1459413972330615030"] },
+    "management_support": { "categoryId": "1461570814414684220", "supportRoles": ["1459413982153539728"] },
+    "appeal_ticket": { "categoryId": "1461570917753946192", "supportRoles": ["1461570948611444818"] }
   },
   "verificationPanelChannel": "1461226880421068855",
   "ticketLogChannel": "1461577864687128691",
