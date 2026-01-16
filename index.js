@@ -191,6 +191,11 @@ client.on('interactionCreate', async i => {
       const panelChannel = client.channels.cache.get(data.verificationPanelChannel);
       if (!panelChannel?.isTextBased()) return i.reply({ content: '❌ Verification panel channel not found.', flags: 64 });
 
+      // --- Prevent duplicate panels ---
+      const messages = await panelChannel.messages.fetch({ limit: 50 });
+      const existingPanel = messages.find(m => m.components.length && m.components[0].components[0].customId === 'verify');
+      if (existingPanel) return i.reply({ content: '⚠️ Verification panel already exists in this channel.', flags: 64 });
+
       const embed = new EmbedBuilder()
         .setTitle('Click to Verify')
         .setDescription('Click the button below to create a verification ticket.')
