@@ -26,6 +26,7 @@
     }
   },
   "verificationPanelChannel": "1461226880421068855",
-  "ticketLogChannel": null,
-  "transcriptChannel": null
+  "ticketLogChannel": "",
+  "transcriptChannel": "",
+  "openTickets": {}
 }
