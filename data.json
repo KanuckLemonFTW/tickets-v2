@@ -26,5 +26,6 @@
     }
   },
   "verificationPanelChannel": "1461226880421068855",
-  "ticketLogChannel": null
+  "ticketLogChannel": null,
+  "transcriptChannel": null
 }
